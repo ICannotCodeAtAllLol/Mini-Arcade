@@ -1,2 +1,2 @@
 # Arcade
-### first independent coding project.
+### First independent coding project.
