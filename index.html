@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Arcade</title>
+  <link rel="icon" href="icon.png" type="image/png" />
+  <style>
+    body { font-family: sans-serif; background: #a9cce4; padding: 2rem; }
+    button { margin: 0.5rem; padding: 1rem 2rem; font-size: 1rem; background: #8bbddf;}
+    pre { background: #a9cce4;; padding: 1rem; border: 1px solid #369de2; min-height: 250px; white-space: pre-wrap; }
+    input { padding: 0.5rem; margin-top: 0.5rem; width: 100%; }
+    #inputArea { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Pick a Game!!</h1>
+  <div>
+    <button onclick="startGame('hangman')">Hangman</button>
+    <button onclick="startGame('higherOrLower')">Higher or Lower</button>
+    <button onclick="startGame('rockPaperScissors')">Rock Paper Scissors</button>
+    <button onclick="startGame('anagram')">Anagram Puzzle</button>
+    <button onclick="startGame('maths')">Maths Puzzle</button>
+    <button onclick="startGame('typingSpeed')">Typing Speed</button>
+  </div>
+
+  <pre id="output">Output will appear here...</pre>
+
+  <div id="inputArea"></div>
+
+  <script>
+    const output = document.getElementById('output');
+    const inputArea = document.getElementById('inputArea');
+    let wongames = 0;
+
+    function log(text) {
+      output.textContent += text + '\n';
+    }
+
+    function clearOutput() {
+      output.textContent = '';
+      inputArea.innerHTML = '';
+    }
+
+    function ask(question, callback) {
+      const label = document.createElement('label');
+      label.textContent = question;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Type your answer...';
+
+      const submit = document.createElement('button');
+      submit.textContent = 'Submit';
+
+      inputArea.innerHTML = '';
+      inputArea.appendChild(label);
+      inputArea.appendChild(document.createElement('br'));
+      inputArea.appendChild(input);
+      inputArea.appendChild(document.createElement('br'));
+      inputArea.appendChild(submit);
+
+      function handleSubmit() {
+        const val = input.value.trim();
+        if (val !== '') {
+          inputArea.innerHTML = '';
+          callback(val)
+        }
+      }
+      submit.onclick = handleSubmit
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          handleSubmit();
+        }
+      });
+      input.focus();
+    }
+
+    function startGame(name) {
+      clearOutput();
+      switch (name) {
+        case 'hangman': hangman(); break;
+        case 'higherOrLower': higherOrLower(); break;
+        case 'rockPaperScissors': rockPaperScissors(); break;
+        case 'anagram': anagram(); break;
+        case 'maths': maths(); break;
+        case 'typingSpeed': typingSpeed(); break;
+      }
+    }
+
+    // ========== Hangman ==========
+    function hangman() {
+      const words = ['apple', 'dinosaur', 'random', 'tree', 'words', 'bored'];
+      const word = words[Math.floor(Math.random() * words.length)];
+      const letters = word.split('');
+      let guessed = Array(letters.length).fill('_');
+      let used = new Set();
+      let mistakes = 0;
+      const maxMistakes = letters.length * 2;
+
+      log(`Welcome to Hangman! You have ${maxMistakes} mistakes allowed.`);
+
+      function nextGuess() {
+        log(`\nWord: ${guessed.join(' ')}\nUsed: ${Array.from(used).join(', ')}\nMistakes: ${mistakes}`);
+        if (mistakes >= maxMistakes) {
+          log(`You lost. The word was "${word}"`);
+          return;
+        }
+        if (!guessed.includes('_')) {
+          log(`You won! The word was "${word}"`);
+          wongames++;
+          return;
+        }
+        ask('Guess a letter:', (input) => {
+          const char = input.toLowerCase();
+          if (char.length !== 1 || !char.match(/[a-z]/)) {
+            log('Please enter a single letter.');
+            return nextGuess();
+          }
+          if (used.has(char)) {
+            log('Letter already used.');
+            return nextGuess();
+          }
+          used.add(char);
+          let found = false;
+          letters.forEach((l, i) => {
+            if (l === char) {
+              guessed[i] = char;
+              found = true;
+            }
+          });
+          if (!found) mistakes++;
+          nextGuess();
+        });
+      }
+
+      nextGuess();
+    }
+
+    // ========== Higher or Lower ==========
+    function higherOrLower() {
+      ask('Choose difficulty: Easy / Medium / Hard', (difficulty) => {
+        let max, tries, hintTurn;
+        difficulty = difficulty.toLowerCase();
+        if (difficulty === 'easy') { max = 10; tries = 5; hintTurn = 2; }
+        else if (difficulty === 'medium') { max = 100; tries = 10; hintTurn = 5; }
+        else { max = 1000; tries = 15; hintTurn = 7; }
+
+        const number = Math.floor(Math.random() * max) + 1;
+        let attempt = 0;
+
+        function guessLoop() {
+          if (attempt >= tries) {
+            log(`Too many tries. The number was ${number}`);
+            return;
+          }
+
+          ask(`Guess a number (1-${max}) [Attempt ${attempt + 1}/${tries}]:`, (val) => {
+            const guess = parseInt(val);
+            attempt++;
+            if (guess === number) {
+              log(`Correct! You guessed it in ${attempt} attempts.`);
+              wongames++;
+              return;
+            }
+            log(guess < number ? 'Too low.' : 'Too high.');
+            if (attempt === hintTurn) {
+              ask('Do you want a hint? (yes/no)', (res) => {
+                if (res.toLowerCase() === 'yes') {
+                  log(`Hint: The number is ${number % 2 === 0 ? 'even' : 'odd'}.`);
+                }
+                guessLoop();
+              });
+            } else {
+              guessLoop();
+            }
+          });
+        }
+
+        guessLoop();
+      });
+    }
+
+    // ========== Rock Paper Scissors ==========
+    function rockPaperScissors() {
+      ask('Choose rock, paper, or scissors:', (player) => {
+        player = player.toLowerCase();
+        const choices = ['rock', 'paper', 'scissors'];
+        if (!choices.includes(player)) {
+          log('Invalid choice.');
+          return;
+        }
+        const computer = choices[Math.floor(Math.random() * 3)];
+        log(`You chose ${player}, computer chose ${computer}.`);
+
+        if (player === computer) log("It's a draw!");
+        else if (
+          (player === 'rock' && computer === 'scissors') ||
+          (player === 'scissors' && computer === 'paper') ||
+          (player === 'paper' && computer === 'rock')
+        ) {
+          log('You win!');
+          wongames++;
+        } else {
+          log('You lose.');
+        }
+      });
+    }
+
+    // ========== Anagram ==========
+    function anagram() {
+      const words = ['apple', 'tree', 'bored', 'temperamental'];
+      const word = words[Math.floor(Math.random() * words.length)];
+      const scrambled = word.split('').sort(() => 0.5 - Math.random()).join('');
+      let attempts = 0;
+
+      function tryGuess() {
+        if (attempts === 5) {
+          log(`Too many attempts. The word was: ${word}`);
+          return;
+        }
+        ask(`Unscramble: ${scrambled}`, (guess) => {
+          attempts++;
+          if (guess.toLowerCase() === word) {
+            log(`Correct! You solved it in ${attempts} tries.`);
+            wongames++;
+          } else {
+            if (attempts === 3) {
+              ask('Need a hint? (yes/no)', (res) => {
+                if (res.toLowerCase() === 'yes') log(`Hint: First letter is ${word[0]}`);
+                tryGuess();
+              });
+            } else {
+              log('Wrong, try again.');
+              tryGuess();
+            }
+          }
+        });
+      }
+
+      tryGuess();
+    }
+
+    // ========== Maths Puzzle ==========
+    function maths() {
+      const a = Math.floor(Math.random() * 20);
+      const b = Math.floor(Math.random() * 20);
+      const ops = ['+', '-', '*'];
+      const op = ops[Math.floor(Math.random() * ops.length)];
+      const expression = `${a} ${op} ${b}`;
+      const result = eval(expression);
+      let attempts = 0;
+
+      function tryMath() {
+        if (attempts === 3) {
+          log(`Too many tries. The correct answer was ${result}`);
+          return;
+        }
+        ask(`Solve: ${expression}`, (guess) => {
+          attempts++;
+          if (Number(guess) === result) {
+            log('Correct!');
+            wongames++;
+          } else {
+            log('Incorrect, try again.');
+            tryMath();
+          }
+        });
+      }
+
+      tryMath();
+    }
+
+    // ========== Typing Speed ==========
+    function typingSpeed() {
+      const words = ['apple', 'banana', 'defibrillator', 'dinosaur'];
+      ask('How many words do you want to spell?', (countStr) => {
+        const count = parseInt(countStr);
+        let current = 0;
+        let totalTime = 0;
+
+        function nextWord() {
+          if (current >= count) {
+            const wpm = (count / (totalTime / 60)).toFixed(2);
+            log(`Finished! WPM: ${wpm}, Total Time: ${totalTime.toFixed(2)}s`);
+            wongames++;
+            return;
+          }
+          const word = words[Math.floor(Math.random() * words.length)];
+          log(`Type this word: ${word}`);
+          const start = Date.now();
+
+          ask('Go!', (typed) => {
+            const timeTaken = (Date.now() - start) / 1000;
+            if (typed.toLowerCase() === word) {
+              totalTime += timeTaken;
+              log(`Correct! Time: ${timeTaken.toFixed(2)}s`);
+              current++;
+              nextWord();
+            } else {
+              log('Incorrect, try again.');
+              nextWord();
+            }
+          });
+        }
+
+        nextWord();
+      });
+    }
+  </script>
+</body>
+</html>
